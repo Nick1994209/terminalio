@@ -28,11 +28,44 @@ type RequestForm struct {
 	VerifySSL      string `form:"verify_ssl"`
 }
 
+// fetchRecentRequests fetches the most recent requests for display in the sidebar
+func (c *RequestController) fetchRecentRequests() {
+	query := "SELECT id, url, method, request_time, response_status FROM requests ORDER BY request_time DESC LIMIT 20"
+	rows, err := models.DB.Query(query)
+	if err != nil {
+		// Continue even if history query fails
+		return
+	}
+	defer rows.Close()
+
+	var requests []models.Request
+	for rows.Next() {
+		var req models.Request
+		err := rows.Scan(
+			&req.ID,
+			&req.URL,
+			&req.Method,
+			&req.RequestTime,
+			&req.ResponseStatus,
+		)
+		if err != nil {
+			continue
+		}
+		requests = append(requests, req)
+	}
+
+	c.Data["RecentRequests"] = requests
+}
+
 func (c *RequestController) Get() {
 	c.Data["RequestMethod"] = "GET"
 	c.Data["RequestTimeout"] = "10"
 	c.Data["RequestAllowRedirects"] = ""
 	c.Data["RequestVerifySSL"] = "on"
+
+	// Fetch recent requests for history sidebar
+	c.fetchRecentRequests()
+
 	c.TplName = "requests.tpl"
 	c.Layout = "layout.tpl"
 }
@@ -206,6 +239,9 @@ func (c *RequestController) SendRequest() {
 	c.Data["RequestAllowRedirects"] = form.AllowRedirects
 	c.Data["RequestVerifySSL"] = form.VerifySSL
 
+	// Fetch recent requests for history sidebar
+	c.fetchRecentRequests()
+
 	c.TplName = "requests.tpl"
 	c.Layout = "layout.tpl"
 }
@@ -319,6 +355,9 @@ func (c *RequestController) ResendRequest() {
 	if req.VerifySSL {
 		c.Data["RequestVerifySSL"] = "on"
 	}
+
+	// Fetch recent requests for history sidebar
+	c.fetchRecentRequests()
 
 	c.TplName = "requests.tpl"
 	c.Layout = "layout.tpl"

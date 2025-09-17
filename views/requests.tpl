@@ -6,6 +6,89 @@
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     
+    /* Main content area with sidebar */
+    .main-content {
+        display: flex;
+        flex: 1;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    /* Sidebar for history */
+    .history-sidebar {
+        width: 300px;
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 15px;
+        overflow-y: auto;
+        max-height: 600px;
+    }
+    
+    .sidebar-title {
+        font-weight: bold;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .history-item {
+        padding: 10px;
+        border: 1px solid #e0e0e0;
+        border-radius: 3px;
+        margin-bottom: 10px;
+        background: white;
+        cursor: pointer;
+    }
+    
+    .history-item:hover {
+        background: #e9ecef;
+    }
+    
+    .history-method {
+        display: inline-block;
+        width: 60px;
+        font-weight: bold;
+        font-size: 12px;
+        padding: 2px 5px;
+        border-radius: 3px;
+        text-align: center;
+        margin-right: 8px;
+    }
+    
+    .method-GET { background: #e7f4e4; color: #2b8a3e; }
+    .method-POST { background: #e3f2fd; color: #1976d2; }
+    .method-PUT { background: #fff3e0; color: #ef6c00; }
+    .method-DELETE { background: #ffebee; color: #c62828; }
+    .method-PATCH { background: #fce4ec; color: #ad1457; }
+    
+    .history-url {
+        font-size: 13px;
+        word-break: break-all;
+    }
+    
+    .history-status {
+        float: right;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .status-success { color: #2b8a3e; }
+    .status-error { color: #c62828; }
+    
+    .history-time {
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    /* Request form area */
+    .request-form-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
     /* URL bar section */
     .url-section {
         display: flex;
@@ -77,6 +160,7 @@
         border-top: none;
         flex: 1;
         overflow-y: auto;
+        min-height: 150px;
     }
     
     .tab-content.active {
@@ -148,6 +232,8 @@
     .response-body {
         padding: 15px;
         background: #fff;
+        max-height: 400px;
+        overflow-y: auto;
     }
     
     .response-container {
@@ -159,6 +245,20 @@
     .response-container.error {
         border-left-color: #dc3545;
         background: #fdf2f2;
+    }
+    
+    /* Preformatted text handling */
+    pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-x: auto;
+        max-height: 300px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 3px;
+        border: 1px solid #e0e0e0;
+        margin: 10px 0;
     }
     
     /* Settings panel */
@@ -241,114 +341,138 @@
 <h2>HTTP Request Client</h2>
 <p>Postman-like interface for sending HTTP requests</p>
 
-<form method="POST" action="/requests/send" class="postman-container">
-    <!-- URL Bar -->
-    <div class="url-section">
-        <select id="method" name="method" class="method-select">
-            <option value="GET" {{if eq .RequestMethod "GET"}}selected{{end}}>GET</option>
-            <option value="POST" {{if eq .RequestMethod "POST"}}selected{{end}}>POST</option>
-            <option value="PUT" {{if eq .RequestMethod "PUT"}}selected{{end}}>PUT</option>
-            <option value="DELETE" {{if eq .RequestMethod "DELETE"}}selected{{end}}>DELETE</option>
-            <option value="PATCH" {{if eq .RequestMethod "PATCH"}}selected{{end}}>PATCH</option>
-            <option value="HEAD" {{if eq .RequestMethod "HEAD"}}selected{{end}}>HEAD</option>
-            <option value="OPTIONS" {{if eq .RequestMethod "OPTIONS"}}selected{{end}}>OPTIONS</option>
-        </select>
-        <input type="text" id="url" name="url" value="{{.RequestURL}}" placeholder="Enter URL" class="url-input" required>
-        <button type="submit" class="send-btn">Send</button>
+<div class="main-content">
+    <!-- History Sidebar -->
+    <div class="history-sidebar">
+        <div class="sidebar-title">Request History</div>
+        {{if .RecentRequests}}
+            {{range .RecentRequests}}
+            <div class="history-item" onclick="resendRequest({{.ID}})">
+                <span class="history-method method-{{.Method}}">{{.Method}}</span>
+                <span class="history-status {{if ge .ResponseStatus 200}}{{if lt .ResponseStatus 400}}status-success{{else}}status-error{{end}}{{else}}status-error{{end}}">
+                    {{if .ResponseStatus}}{{.ResponseStatus}}{{else}}ERR{{end}}
+                </span>
+                <div class="history-url">{{.URL}}</div>
+                <div class="history-time">{{.RequestTime.Format "2006-01-02 15:04:05"}}</div>
+            </div>
+            {{end}}
+        {{else}}
+            <p>No request history yet.</p>
+        {{end}}
     </div>
     
-    <!-- Tab Navigation -->
-    <div class="tabs">
-        <div class="tab active" data-tab="params">Params</div>
-        <div class="tab" data-tab="headers">Headers</div>
-        <div class="tab" data-tab="cookies">Cookies</div>
-        <div class="tab" data-tab="body">Body</div>
-        <div class="tab" data-tab="settings">Settings</div>
-    </div>
-    
-    <!-- Params Tab -->
-    <div class="tab-content active" id="params-tab">
-        <div class="form-group">
-            <label>Query Parameters</label>
-            <textarea id="get_params" name="get_params" placeholder="Key=Value&#10;One parameter per line">{{.RequestGetParams}}</textarea>
-        </div>
-    </div>
-    
-    <!-- Headers Tab -->
-    <div class="tab-content" id="headers-tab">
-        <div class="form-group">
-            <label>Headers</label>
-            <textarea id="headers" name="headers" placeholder="Key: Value&#10;One header per line">{{.RequestHeaders}}</textarea>
-        </div>
-    </div>
-    
-    <!-- Cookies Tab -->
-    <div class="tab-content" id="cookies-tab">
-        <div class="form-group">
-            <label>Cookies</label>
-            <textarea id="cookies" name="cookies" placeholder="Key=Value&#10;One cookie per line">{{.RequestCookies}}</textarea>
-        </div>
-    </div>
-    
-    <!-- Body Tab -->
-    <div class="tab-content" id="body-tab">
-        <div class="form-group">
-            <label>Request Body</label>
-            <textarea id="body" name="body" placeholder="Enter request body">{{.RequestBody}}</textarea>
-        </div>
-    </div>
-    
-    <!-- Settings Tab -->
-    <div class="tab-content" id="settings-tab">
-        <div class="settings-panel">
-            <div class="settings-col">
+    <!-- Request Form Area -->
+    <div class="request-form-area">
+        <form method="POST" action="/requests/send" class="postman-container">
+            <!-- URL Bar -->
+            <div class="url-section">
+                <select id="method" name="method" class="method-select">
+                    <option value="GET" {{if eq .RequestMethod "GET"}}selected{{end}}>GET</option>
+                    <option value="POST" {{if eq .RequestMethod "POST"}}selected{{end}}>POST</option>
+                    <option value="PUT" {{if eq .RequestMethod "PUT"}}selected{{end}}>PUT</option>
+                    <option value="DELETE" {{if eq .RequestMethod "DELETE"}}selected{{end}}>DELETE</option>
+                    <option value="PATCH" {{if eq .RequestMethod "PATCH"}}selected{{end}}>PATCH</option>
+                    <option value="HEAD" {{if eq .RequestMethod "HEAD"}}selected{{end}}>HEAD</option>
+                    <option value="OPTIONS" {{if eq .RequestMethod "OPTIONS"}}selected{{end}}>OPTIONS</option>
+                </select>
+                <input type="text" id="url" name="url" value="{{.RequestURL}}" placeholder="Enter URL" class="url-input" required>
+                <button type="submit" class="send-btn">Send</button>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="tabs">
+                <div class="tab active" data-tab="params">Params</div>
+                <div class="tab" data-tab="headers">Headers</div>
+                <div class="tab" data-tab="cookies">Cookies</div>
+                <div class="tab" data-tab="body">Body</div>
+                <div class="tab" data-tab="settings">Settings</div>
+            </div>
+            
+            <!-- Params Tab -->
+            <div class="tab-content active" id="params-tab">
                 <div class="form-group">
-                    <label for="timeout">Timeout (seconds):</label>
-                    <input type="number" id="timeout" name="timeout" value="{{.RequestTimeout}}" min="1" max="300">
+                    <label>Query Parameters</label>
+                    <textarea id="get_params" name="get_params" placeholder="Key=Value&#10;One parameter per line">{{.RequestGetParams}}</textarea>
                 </div>
             </div>
-            <div class="settings-col">
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" id="allow_redirects" name="allow_redirects" {{if .RequestAllowRedirects}}checked{{end}}>
-                    <label for="allow_redirects">Follow Redirects</label>
-                </div>
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" id="verify_ssl" name="verify_ssl" {{if .RequestVerifySSL}}checked{{end}}>
-                    <label for="verify_ssl">Verify SSL Certificate</label>
+            
+            <!-- Headers Tab -->
+            <div class="tab-content" id="headers-tab">
+                <div class="form-group">
+                    <label>Headers</label>
+                    <textarea id="headers" name="headers" placeholder="Key: Value&#10;One header per line">{{.RequestHeaders}}</textarea>
                 </div>
             </div>
-        </div>
-    </div>
-</form>
+            
+            <!-- Cookies Tab -->
+            <div class="tab-content" id="cookies-tab">
+                <div class="form-group">
+                    <label>Cookies</label>
+                    <textarea id="cookies" name="cookies" placeholder="Key=Value&#10;One cookie per line">{{.RequestCookies}}</textarea>
+                </div>
+            </div>
+            
+            <!-- Body Tab -->
+            <div class="tab-content" id="body-tab">
+                <div class="form-group">
+                    <label>Request Body</label>
+                    <textarea id="body" name="body" placeholder="Enter request body">{{.RequestBody}}</textarea>
+                </div>
+            </div>
+            
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settings-tab">
+                <div class="settings-panel">
+                    <div class="settings-col">
+                        <div class="form-group">
+                            <label for="timeout">Timeout (seconds):</label>
+                            <input type="number" id="timeout" name="timeout" value="{{.RequestTimeout}}" min="1" max="300">
+                        </div>
+                    </div>
+                    <div class="settings-col">
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="allow_redirects" name="allow_redirects" {{if .RequestAllowRedirects}}checked{{end}}>
+                            <label for="allow_redirects">Follow Redirects</label>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="verify_ssl" name="verify_ssl" {{if .RequestVerifySSL}}checked{{end}}>
+                            <label for="verify_ssl">Verify SSL Certificate</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
 
-<!-- Response Section -->
-{{if .ErrorMessage}}
-<div class="response-section">
-    <div class="response-header">Response</div>
-    <div class="response-body">
-        <div class="response-container error">
-            <h3>Error:</h3>
-            <pre>{{.ErrorMessage}}</pre>
+        <!-- Response Section -->
+        {{if .ErrorMessage}}
+        <div class="response-section">
+            <div class="response-header">Response</div>
+            <div class="response-body">
+                <div class="response-container error">
+                    <h3>Error:</h3>
+                    <pre>{{.ErrorMessage}}</pre>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
-{{else if .ResponseBody}}
-<div class="response-section">
-    <div class="response-header">Response • Status: {{.ResponseStatusCode}}</div>
-    <div class="response-body">
-        <div class="response-container">
-            <p><strong>Headers:</strong></p>
-            <pre>{{range $key, $values := .ResponseHeaders}}{{$key}}: {{range $values}}{{.}} {{end}}
+        {{else if .ResponseBody}}
+        <div class="response-section">
+            <div class="response-header">Response • Status: {{.ResponseStatusCode}}</div>
+            <div class="response-body">
+                <div class="response-container">
+                    <p><strong>Headers:</strong></p>
+                    <pre>{{range $key, $values := .ResponseHeaders}}{{$key}}: {{range $values}}{{.}} {{end}}
 {{end}}</pre>
-            <p><strong>Body:</strong></p>
-            <pre>{{.ResponseBody}}</pre>
+                    <p><strong>Body:</strong></p>
+                    <pre>{{.ResponseBody}}</pre>
+                </div>
+            </div>
         </div>
+        {{end}}
     </div>
 </div>
-{{end}}
 
 <div>
-    <a href="/requests/history" class="history-link">View Request History</a>
+    <a href="/requests/history" class="history-link">View Full Request History</a>
 </div>
 
 <script>
@@ -372,4 +496,15 @@
             });
         });
     });
+    
+    // Function to resend a request
+    function resendRequest(id) {
+        if (confirm('Resend this request?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/requests/resend/${id}`;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
 </script>
