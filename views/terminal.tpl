@@ -14,6 +14,16 @@
         white-space: pre-wrap;
         border: 1px solid #ddd;
         outline: none;
+        display: flex;
+        flex-direction: column;
+    }
+    .terminal-content {
+        flex: 1;
+        overflow-y: auto;
+        margin-bottom: 10px;
+    }
+    .terminal-input-line {
+        flex-shrink: 0;
     }
     .terminal-history {
         flex: 1;
@@ -71,7 +81,10 @@
 <p>Linux-style terminal emulator.</p>
 
 <div class="terminal-container">
-    <div class="terminal-output" id="output" tabindex="0"></div>
+    <div class="terminal-output" id="output" tabindex="0">
+        <div class="terminal-content" id="terminal-content"></div>
+        <div class="terminal-input-line" id="input-line-container"></div>
+    </div>
     <div class="terminal-history">
         <h3>Command History</h3>
         <div id="history"></div>
@@ -136,30 +149,41 @@
     }
     
     function appendOutput(text) {
-        const output = document.getElementById('output');
-        output.innerHTML += text + '\n';
-        output.scrollTop = output.scrollHeight;
+        const content = document.getElementById('terminal-content');
+        content.innerHTML += text + '\n';
+        scrollToBottom();
     }
     
     function appendCommandEcho(command) {
-        const output = document.getElementById('output');
-        output.innerHTML += prompt + command + '\n';
-        output.scrollTop = output.scrollHeight;
+        const content = document.getElementById('terminal-content');
+        content.innerHTML += prompt + command + '\n';
+        scrollToBottom();
     }
     
     function appendPrompt() {
-        const output = document.getElementById('output');
-        output.innerHTML += '<div class="terminal-line"><span class="terminal-prompt">' + prompt + '</span><span id="input-line"></span><span class="terminal-cursor"></span></div>';
-        output.scrollTop = output.scrollHeight;
+        const inputLineContainer = document.getElementById('input-line-container');
+        inputLineContainer.innerHTML = '<div class="terminal-line"><span class="terminal-prompt">' + prompt + '</span><span id="input-text"></span><span class="terminal-cursor"></span></div>';
         currentInput = '';
-        updateInputLine();
+        updateInputText();
+        scrollToBottom();
     }
     
-    function updateInputLine() {
-        const inputLine = document.getElementById('input-line');
-        if (inputLine) {
-            inputLine.textContent = currentInput;
+    function updateInputText() {
+        const inputText = document.getElementById('input-text');
+        if (inputText) {
+            inputText.textContent = currentInput;
         }
+    }
+    
+    function scrollToBottom() {
+        const output = document.getElementById('output');
+        const content = document.getElementById('terminal-content');
+        
+        // Scroll the main output container to bottom
+        output.scrollTop = output.scrollHeight;
+        
+        // Also scroll the content container to bottom
+        content.scrollTop = content.scrollHeight;
     }
     
     function updateHistory() {
@@ -173,9 +197,11 @@
             btn.onclick = function() {
                 // Copy command to current input
                 currentInput = cmd;
-                updateInputLine();
-                // Focus the terminal
-                document.getElementById('output').focus();
+                updateInputText();
+                // Focus the terminal and scroll to bottom
+                const output = document.getElementById('output');
+                output.focus();
+                scrollToBottom();
             };
             historyDiv.appendChild(btn);
             historyDiv.appendChild(document.createElement('br'));
@@ -222,16 +248,19 @@
                 } else {
                     appendOutput(prompt);
                 }
-                // Clear the input line content but keep the container
-                const inputLine = document.getElementById('input-line');
-                if (inputLine) {
-                    inputLine.textContent = '';
+                // Clear the input text content but keep the container
+                const inputText = document.getElementById('input-text');
+                if (inputText) {
+                    inputText.textContent = '';
                 }
+                // Scroll to bottom after command execution
+                setTimeout(scrollToBottom, 10);
             } else if (e.key === 'Backspace') {
                 e.preventDefault();
                 if (currentInput.length > 0) {
                     currentInput = currentInput.slice(0, -1);
-                    updateInputLine();
+                    updateInputText();
+                    scrollToBottom();
                 }
             } else if (e.key === 'Tab') {
                 e.preventDefault();
@@ -239,7 +268,8 @@
             } else if (e.key.length === 1) {
                 e.preventDefault();
                 currentInput += e.key;
-                updateInputLine();
+                updateInputText();
+                scrollToBottom();
             }
         });
         
@@ -252,6 +282,7 @@
         // Add initial prompt after a short delay to ensure connection
         setTimeout(function() {
             appendPrompt();
+            scrollToBottom();
         }, 100);
     });
 </script>
