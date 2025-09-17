@@ -27,6 +27,33 @@ func (c *TerminalController) Get() {
 	c.Layout = "layout.tpl"
 }
 
+func sendUpdatedHistory(ws *websocket.Conn) {
+	// Load command history
+	rows, err := models.DB.Query("SELECT command FROM commands ORDER BY created_at DESC LIMIT 50")
+	if err != nil {
+		log.Println("Error loading command history:", err)
+		return
+	}
+	defer rows.Close()
+
+	var history []string
+	for rows.Next() {
+		var cmd string
+		if err := rows.Scan(&cmd); err != nil {
+			continue
+		}
+		history = append(history, cmd)
+	}
+
+	// Send history to client
+	if err := ws.WriteJSON(map[string]interface{}{
+		"type": "history",
+		"data": history,
+	}); err != nil {
+		log.Println("Error sending history:", err)
+	}
+}
+
 func (c *TerminalController) WebSocket() {
 	ws, err := upgrader.Upgrade(c.Ctx.ResponseWriter, c.Ctx.Request, nil)
 	if err != nil {
@@ -61,6 +88,12 @@ func (c *TerminalController) WebSocket() {
 		return
 	}
 
+	// Send connection confirmation
+	ws.WriteJSON(map[string]interface{}{
+		"type": "output",
+		"data": "[Connected to terminal]",
+	})
+
 	for {
 		// Read message from client
 		_, message, err := ws.ReadMessage()
@@ -84,6 +117,9 @@ func (c *TerminalController) WebSocket() {
 		}
 		stmt.Close()
 
+		// Reload and send updated history
+		go sendUpdatedHistory(ws)
+
 		// Execute command
 		parts := strings.Fields(cmdStr)
 		if len(parts) == 0 {
@@ -96,18 +132,27 @@ func (c *TerminalController) WebSocket() {
 		cmd := exec.Command(name, args...)
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte("Error creating stdout pipe: "+err.Error()))
+			ws.WriteJSON(map[string]interface{}{
+				"type": "output",
+				"data": "Error creating stdout pipe: " + err.Error(),
+			})
 			continue
 		}
 
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte("Error creating stderr pipe: "+err.Error()))
+			ws.WriteJSON(map[string]interface{}{
+				"type": "output",
+				"data": "Error creating stderr pipe: " + err.Error(),
+			})
 			continue
 		}
 
 		if err := cmd.Start(); err != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte("Error starting command: "+err.Error()))
+			ws.WriteJSON(map[string]interface{}{
+				"type": "output",
+				"data": "Error starting command: " + err.Error(),
+			})
 			continue
 		}
 
@@ -115,20 +160,29 @@ func (c *TerminalController) WebSocket() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			output := scanner.Text()
-			ws.WriteMessage(websocket.TextMessage, []byte(output))
+			ws.WriteJSON(map[string]interface{}{
+				"type": "output",
+				"data": output,
+			})
 		}
 
 		errScanner := bufio.NewScanner(stderr)
 		for errScanner.Scan() {
 			output := errScanner.Text()
-			ws.WriteMessage(websocket.TextMessage, []byte(output))
+			ws.WriteJSON(map[string]interface{}{
+				"type": "output",
+				"data": output,
+			})
 		}
 
 		if err := cmd.Wait(); err != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte("Command finished with error: "+err.Error()))
-		} else {
-			ws.WriteMessage(websocket.TextMessage, []byte("Command finished successfully"))
+			ws.WriteJSON(map[string]interface{}{
+				"type": "output",
+				"data": "Command finished with error: " + err.Error(),
+			})
 		}
+		// We don't send a "Command finished successfully" message anymore
+		// The frontend will add a new prompt after receiving any "Command finished" message
 	}
 
 	// Prevent Beego from trying to render a template
