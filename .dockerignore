@@ -1,0 +1,41 @@
+# Git files
+.git
+.gitignore
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Dependency directories
+vendor/
+Godeps/
+
+# Go workspace file
+go.work
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Log files
+*.log
+
+# Environment files
+.env
+
+# Test files
+coverage.txt
+*.cover
+
+# Documentation
+README.md
+LICENSE
+.dockerignore
+.gitignore
