@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"log"
+	"os"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -36,7 +37,13 @@ type Command struct {
 
 func InitDB() {
 	var err error
-	DB, err = sql.Open("sqlite3", "./requests.db")
+	// Use environment variable for database path, fallback to default if not set
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "./requests.db"
+	}
+
+	DB, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}

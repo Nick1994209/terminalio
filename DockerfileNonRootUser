@@ -35,8 +35,17 @@ RUN apt-get update && \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
 # Set working directory
 WORKDIR /app
+
+
+# Change ownership to non-root user
+RUN chown appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Copy the binary from builder stage
 COPY --from=builder /app/main .
@@ -50,7 +59,11 @@ COPY --from=builder /app/static ./static
 # Copy views
 COPY --from=builder /app/views ./views
 
-RUN mkdir -p /app/data
+# Create directory for database file and make it writable
+RUN mkdir -p /app/data && \
+    chmod 777 /app/data
+
+# Set environment variable for database path
 ENV DB_PATH=/app/data/requests.db
 
 # Expose port
