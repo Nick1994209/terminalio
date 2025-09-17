@@ -98,7 +98,8 @@
     let history = [];
     
     function connect() {
-        ws = new WebSocket('ws://' + window.location.host + '/ws/terminal');
+        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        ws = new WebSocket(protocol + window.location.host + '/ws/terminal');
         
         ws.onopen = function() {
             // Connection confirmation now comes from backend
