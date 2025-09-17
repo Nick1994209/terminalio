@@ -1,4 +1,4 @@
-# Server for Requests
+# TerminalIO
 
 A web-based HTTP client service built with Go and the Beego framework that allows users to send HTTP requests with customizable parameters, view responses, and maintain a history of requests.
 

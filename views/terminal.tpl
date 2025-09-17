@@ -1,5 +1,3 @@
-{{template "layout.tpl" .}}
-
 <style>
     .terminal-container {
         display: flex;

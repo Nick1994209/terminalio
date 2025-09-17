@@ -1,5 +1,3 @@
-{{template "layout.tpl" .}}
-
 <style>
     .form-row {
         display: flex;
@@ -12,6 +10,7 @@
 </style>
 
 <h2>HTTP Request Form</h2>
+<p>Curl emulator</p>
 
 <form method="POST" action="/requests/send">
     <div class="form-group">

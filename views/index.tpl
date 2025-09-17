@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server for Requests</title>
+    <title>TerminalIO</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -43,13 +43,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>Server for Requests</h1>
+        <h1>TerminalIO</h1>
         <nav>
             <a href="/requests">Requests</a>
             <a href="/terminal">Terminal</a>
         </nav>
         <div style="text-align: center; padding: 50px;">
-            <h2>Welcome to Server for Requests</h2>
+            <h2>Welcome to TerminalIO</h2>
             <p>This application allows you to send HTTP requests and execute terminal commands.</p>
             
             <div style="margin-top: 30px;">

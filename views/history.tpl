@@ -1,5 +1,3 @@
-{{template "layout.tpl" .}}
-
 <style>
     .filter-form {
         background-color: #f8f9fa;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server for Requests</title>
+    <title>TerminalIO</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -134,7 +134,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Server for Requests</h1>
+        <h1>TerminalIO</h1>
         <nav>
             <a href="/">Home</a>
             <a href="/requests">Requests</a>
