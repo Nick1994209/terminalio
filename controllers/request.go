@@ -362,3 +362,17 @@ func (c *RequestController) ResendRequest() {
 	c.TplName = "requests.tpl"
 	c.Layout = "layout.tpl"
 }
+
+func (c *RequestController) ClearHistory() {
+	// Delete all requests from the database
+	_, err := models.DB.Exec("DELETE FROM requests")
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Ctx.Output.Body([]byte("Error clearing request history: " + err.Error()))
+		return
+	}
+
+	// Return success response
+	c.Ctx.Output.SetStatus(200)
+	c.Ctx.Output.Body([]byte("Request history cleared successfully"))
+}

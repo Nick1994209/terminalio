@@ -40,3 +40,4 @@ LICENSE
 .dockerignore
 .gitignore
 requests.db
+terminalio

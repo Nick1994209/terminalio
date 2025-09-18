@@ -44,9 +44,6 @@ COPY --from=builder /app/main .
 # Copy configuration files
 COPY --from=builder /app/conf ./conf
 
-# Copy static assets
-COPY --from=builder /app/static ./static
-
 # Copy views
 COPY --from=builder /app/views ./views
 

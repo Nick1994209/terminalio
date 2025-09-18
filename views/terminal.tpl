@@ -82,6 +82,20 @@
         0%, 100% { opacity: 1; }
         50% { opacity: 0; }
     }
+    .clear-history-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 2px 6px;
+        font-size: 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        float: right;
+        margin-top: 5px;
+    }
+    .clear-history-btn:hover {
+        background-color: #c82333;
+    }
 </style>
 
 <h2>Terminal</h2>
@@ -93,7 +107,7 @@
         <div class="terminal-input-line" id="input-line-container"></div>
     </div>
     <div class="terminal-history">
-        <h3>Command History</h3>
+        <h3>Command History<button class="clear-history-btn" onclick="clearHistory()">Clear</button></h3>
         <div id="history"></div>
     </div>
 </div>
@@ -124,6 +138,10 @@
                 if (data.type === 'history') {
                     // Load command history
                     history = data.data;
+                    updateHistory();
+                } else if (data.type === 'clear_history') {
+                    // Clear local history as well
+                    history = [];
                     updateHistory();
                 } else if (data.type === 'output') {
                     // Display command output
@@ -286,6 +304,24 @@
         appendPrompt();
     }
     
+    function clearHistory() {
+        // Confirm with user before clearing
+        if (!confirm('Are you sure you want to clear all command history?')) {
+            return;
+        }
+        
+        // Clear the history array
+        history = [];
+        
+        // Clear the history display
+        const historyDiv = document.getElementById('history');
+        historyDiv.innerHTML = '';
+        
+        // Reset history navigation
+        historyIndex = 0;
+        tempInput = '';
+    }
+    
     // sendRawKey sends raw key events to the terminal
     function sendRawKey(e) {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -393,8 +429,8 @@
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (currentInput.trim() !== '') {
-                    // Add command to history
-                    if (!history || history.length === 0 || history[history.length - 1] !== currentInput) {
+                    // Add command to history (exclude clear_history message)
+                    if (currentInput !== '{"type": "clear_history"}' && (!history || history.length === 0 || history[history.length - 1] !== currentInput)) {
                         if (!history) {
                             history = [];
                         }

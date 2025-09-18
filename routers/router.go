@@ -16,6 +16,7 @@ func init() {
 	beego.Router("/requests/history", &controllers.RequestController{}, "get:History")
 	beego.Router("/requests/delete/:id", &controllers.RequestController{}, "post:DeleteRequest")
 	beego.Router("/requests/resend/:id", &controllers.RequestController{}, "post:ResendRequest")
+	beego.Router("/requests/clear-history", &controllers.RequestController{}, "post:ClearHistory")
 
 	// Terminal page
 	beego.Router("/terminal", &controllers.TerminalController{}, "get:Get")

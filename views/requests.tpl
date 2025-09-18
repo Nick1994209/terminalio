@@ -336,6 +336,22 @@
         color: white;
         border-color: #dc3545;
     }
+    /* Clear history button */
+    .clear-history-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 2px 6px;
+        font-size: 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        float: right;
+        margin-top: 5px;
+    }
+    
+    .clear-history-btn:hover {
+        background-color: #c82333;
+    }
 </style>
 
 <h2>HTTP Request Client</h2>
@@ -344,7 +360,7 @@
 <div class="main-content">
     <!-- History Sidebar -->
     <div class="history-sidebar">
-        <div class="sidebar-title">Request History</div>
+        <div class="sidebar-title">Request History<button class="clear-history-btn" onclick="clearRequestHistory()">Clear</button></div>
         {{if .RecentRequests}}
             {{range .RecentRequests}}
             <div class="history-item" onclick="resendRequest({{.ID}})">
@@ -506,5 +522,37 @@
             document.body.appendChild(form);
             form.submit();
         }
+    }
+    
+    // Function to clear request history
+    function clearRequestHistory() {
+        // Confirm with user before clearing
+        if (!confirm('Are you sure you want to clear all request history?')) {
+            return;
+        }
+        
+        // Send request to clear history
+        fetch('/requests/clear-history', {
+            method: 'POST'
+        })
+        .then(response => {
+            if (response.ok) {
+                // Clear the history display
+                const historySidebar = document.querySelector('.history-sidebar');
+                const historyItems = historySidebar.querySelectorAll('.history-item');
+                historyItems.forEach(item => item.remove());
+                
+                // Show a message that history is cleared
+                const noHistoryMsg = document.createElement('p');
+                noHistoryMsg.textContent = 'No request history yet.';
+                historySidebar.appendChild(noHistoryMsg);
+            } else {
+                alert('Failed to clear request history');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error clearing request history');
+        });
     }
 </script>
