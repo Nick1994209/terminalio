@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"server-for-requests/models"
 	"strconv"
 	"strings"
+	"terminalio/models"
 	"time"
 
 	beego "github.com/beego/beego/v2/server/web"

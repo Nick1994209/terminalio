@@ -1,4 +1,4 @@
-module server-for-requests
+module terminalio
 
 go 1.24.5
 

@@ -1,15 +1,15 @@
 package main
 
 import (
-	"server-for-requests/models"
-	_ "server-for-requests/routers"
+	"terminalio/models"
+	_ "terminalio/routers"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
 )
 
 func main() {
-	logs.Info("Starting server-for-requests application")
+	logs.Info("Starting terminalio application")
 
 	// Initialize database
 	models.InitDB()

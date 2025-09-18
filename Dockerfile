@@ -23,16 +23,16 @@ COPY . .
 # Build the application with optimizations
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main .
 
-# Use a smaller Debian image for the final stage
-FROM debian:stable-slim
+# Base stage with common setup
+FROM debian:stable-slim AS base
 
-# Install only runtime dependencies
+# Install additional tools
 RUN apt-get update && \
     apt-get install -y \
     iputils-ping \
     curl \
     ca-certificates \
-    sqlite3 \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -50,11 +50,30 @@ COPY --from=builder /app/static ./static
 # Copy views
 COPY --from=builder /app/views ./views
 
+# Create directory for database file and make it writable
 RUN mkdir -p /app/data
+
+# Set environment variable for database path
 ENV DB_PATH=/app/data/requests.db
 
 # Expose port
 EXPOSE 8080
+CMD ["./main"]
+
+# Root user stage
+FROM base AS root-user
+CMD ["./main"]
+
+# Non-root user stage
+FROM base AS non-root-user
+
+# Create user and set ownership
+RUN groupadd -g 1000 appuser && \
+    useradd -u 1000 -g appuser -s /bin/bash -m appuser && \
+    chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Run the application
 CMD ["./main"]

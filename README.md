@@ -27,6 +27,14 @@ A web-based HTTP client service built with Go and the Beego framework that allow
 
 - **Database Storage**: All requests and terminal commands are stored in an SQLite database for persistence.
 
+## 🧰 Terminal Essential Linux Tools Overview
+
+| Tool            | Description                                      | Common Commands                                  |
+|-----------------|--------------------------------------------------|--------------------------------------------------|
+| `iputils-ping`  | Sends ICMP echo requests to test host reachability. | `ping google.com`<br>`ping -c 4 8.8.8.8`         |
+| `curl`          | Transfers data to/from servers using HTTP, HTTPS, FTP, etc. | `curl -I https://example.com`<br>`curl https://api.github.com`<br>`curl -X POST -d '{"key":"value"}' https://httpbin.org/post` |
+| `wget`          | Downloads files from the web via HTTP, HTTPS, or FTP. | `wget https://example.com/file.zip`<br>`wget --spider https://example.com`<br>`wget -O output.txt https://example.com` |
+
 ## Technologies Used
 
 - **Backend**: Go with Beego framework
@@ -50,7 +58,7 @@ A web-based HTTP client service built with Go and the Beego framework that allow
 
 2. Navigate to the project directory:
    ```bash
-   cd server-for-requests
+   cd terminalio
    ```
 
 3. Run the application:
@@ -62,12 +70,19 @@ A web-based HTTP client service built with Go and the Beego framework that allow
 
 ### Docker
 
-The application can also be run using Docker:
+The application can also be run using Docker. Two build targets are available:
 
-```bash
-docker build -t server-for-requests .
-docker run -p 8080:8080 server-for-requests
-```
+1. **Root user** (default):
+   ```bash
+   docker build --target root-user -t terminalio .
+   docker run -p 8080:8080 terminalio
+   ```
+
+2. **Non-root user** (enhanced security):
+   ```bash
+   docker build --target non-root-user -t terminalio:nonroot .
+   docker run -p 8080:8080 terminalio:nonroot
+   ```
 
 ## Usage
 

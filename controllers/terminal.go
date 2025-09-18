@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
-	"server-for-requests/models"
 	"strings"
+	"terminalio/models"
 
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/gorilla/websocket"
