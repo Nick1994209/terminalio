@@ -11,7 +11,7 @@
         padding: 10px;
         font-family: monospace;
         overflow-y: auto;
-        white-space: pre-wrap;
+        white-space: pre;
         border: 1px solid #ddd;
         outline: none;
         display: flex;
@@ -21,6 +21,8 @@
         flex: 1;
         overflow-y: auto;
         margin-bottom: 10px;
+        white-space: pre;
+        font-family: monospace;
     }
     .terminal-input-line {
         flex-shrink: 0;
@@ -151,13 +153,47 @@
     
     function appendOutput(text) {
         const content = document.getElementById('terminal-content');
-        content.innerHTML += text + '\n';
+        const htmlText = convertAnsiToHtml(text);
+        content.innerHTML += htmlText + '\n';
         scrollToBottom();
+    }
+    
+    // Simple ANSI to HTML converter
+    function convertAnsiToHtml(text) {
+        // Replace common ANSI escape sequences with HTML
+        // This is a simplified version - a full implementation would be more complex
+        
+        // Handle carriage return + line feed
+        text = text.replace(/\r\n/g, '\n');
+        
+        // Handle carriage return (move cursor to beginning of line)
+        text = text.replace(/\r/g, '');
+        
+        // Handle common escape sequences that cause display issues
+        // Clear screen and home cursor
+        text = text.replace(/\x1b\[2J\x1b\[H/g, '');
+        
+        // Handle cursor positioning (simplified)
+        text = text.replace(/\x1b\[(\d+);(\d+)H/g, '');
+        
+        // Handle other common escape sequences
+        text = text.replace(/\x1b\[([0-9;]*)m/g, ''); // Color codes
+        text = text.replace(/\x1b\[K/g, ''); // Clear to end of line
+        text = text.replace(/\x1b\[\?25[lh]/g, ''); // Hide/show cursor
+        text = text.replace(/\x1b\[([0-9;]*)[ABCDEFG]/g, ''); // Cursor movement
+        
+        // Escape HTML characters
+        text = text.replace(/&/g, '&')
+                     .replace(/</g, '<')
+                     .replace(/>/g, '>');
+        
+        return text;
     }
     
     function appendCommandEcho(command) {
         const content = document.getElementById('terminal-content');
-        content.innerHTML += prompt + command + '\n';
+        const htmlText = convertAnsiToHtml(prompt + command);
+        content.innerHTML += htmlText + '\n';
         scrollToBottom();
     }
     
@@ -223,6 +259,97 @@
         appendPrompt();
     }
     
+    // sendRawKey sends raw key events to the terminal
+    function sendRawKey(e) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+        
+        // Convert key event to ANSI escape sequences or raw bytes
+        let rawData;
+        
+        // Handle special keys
+        if (e.key === 'ArrowUp') {
+            rawData = '\x1b[A';
+        } else if (e.key === 'ArrowDown') {
+            rawData = '\x1b[B';
+        } else if (e.key === 'ArrowRight') {
+            rawData = '\x1b[C';
+        } else if (e.key === 'ArrowLeft') {
+            rawData = '\x1b[D';
+        } else if (e.key === 'Backspace') {
+            rawData = '\x7f'; // DEL character
+        } else if (e.key === 'Tab') {
+            rawData = '\t';
+        } else if (e.key === 'Escape') {
+            rawData = '\x1b';
+        } else if (e.ctrlKey) {
+            // Handle Ctrl+key combinations
+            if (e.key === 'c') {
+                rawData = '\x03'; // Ctrl+C
+            } else if (e.key === 'd') {
+                rawData = '\x04'; // Ctrl+D
+            } else if (e.key === 'z') {
+                rawData = '\x1a'; // Ctrl+Z
+            } else if (e.key === 'a') {
+                rawData = '\x01'; // Ctrl+A
+            } else if (e.key === 'e') {
+                rawData = '\x05'; // Ctrl+E
+            } else if (e.key === 'k') {
+                rawData = '\x0b'; // Ctrl+K
+            } else if (e.key === 'u') {
+                rawData = '\x15'; // Ctrl+U
+            } else if (e.key === 'w') {
+                rawData = '\x17'; // Ctrl+W
+            } else {
+                // For other Ctrl+key combinations, convert to control character
+                const charCode = e.key.charCodeAt(0);
+                if (charCode >= 65 && charCode <= 90) { // A-Z
+                    rawData = String.fromCharCode(charCode - 64);
+                } else if (charCode >= 97 && charCode <= 122) { // a-z
+                    rawData = String.fromCharCode(charCode - 96);
+                } else {
+                    rawData = e.key;
+                }
+            }
+        } else {
+            rawData = e.key;
+        }
+        
+        // Send as raw input message
+        const msg = {
+            type: 'raw',
+            data: btoa(rawData) // Base64 encode the data
+        };
+        ws.send(JSON.stringify(msg));
+    }
+    
+    // resizeTerminal sends a resize message to the terminal
+    function resizeTerminal() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+        
+        const output = document.getElementById('output');
+        const content = document.getElementById('terminal-content');
+        
+        // Calculate terminal size based on container dimensions
+        // This is a rough estimation - you might want to adjust based on your font size
+        const charWidth = 8; // Approximate character width in pixels
+        const charHeight = 16; // Approximate character height in pixels
+        
+        const cols = Math.floor(output.clientWidth / charWidth);
+        const rows = Math.floor((output.clientHeight - 30) / charHeight); // Subtract some pixels for padding
+        
+        // Send resize message
+        const msg = {
+            type: 'resize',
+            rows: rows,
+            cols: cols
+        };
+        ws.send(JSON.stringify(msg));
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
         const output = document.getElementById('output');
         
@@ -235,6 +362,7 @@
                 return;
             }
             
+            // Handle special keys that should be sent to the terminal
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (currentInput.trim() !== '') {
@@ -262,16 +390,37 @@
                     currentInput = currentInput.slice(0, -1);
                     updateInputText();
                     scrollToBottom();
+                } else {
+                    // Send backspace to terminal when input is empty
+                    sendRawKey(e);
                 }
             } else if (e.key === 'Tab') {
                 e.preventDefault();
-                // Could implement tab completion here
+                // Send tab to terminal
+                sendRawKey(e);
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                // Send arrow keys to terminal
+                sendRawKey(e);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                // Send escape to terminal
+                sendRawKey(e);
+            } else if (e.ctrlKey) {
+                e.preventDefault();
+                // Send Ctrl+key combinations to terminal
+                sendRawKey(e);
             } else if (e.key.length === 1) {
                 e.preventDefault();
                 currentInput += e.key;
                 updateInputText();
                 scrollToBottom();
             }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            resizeTerminal();
         });
         
         // Focus the terminal on load
@@ -284,6 +433,8 @@
         setTimeout(function() {
             appendPrompt();
             scrollToBottom();
+            // Send initial resize
+            resizeTerminal();
         }, 100);
     });
 </script>

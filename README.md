@@ -21,9 +21,10 @@ A web-based HTTP client service built with Go and the Beego framework that allow
   - Delete request records
 
 - **Real-time Terminal**: Execute system commands through a web interface:
-  - WebSocket-based terminal
+  - WebSocket-based terminal with automatic protocol detection (ws/wss)
   - Command history storage
   - Interactive command execution
+  - Support for shell builtins (cd, export, etc.)
 
 - **Database Storage**: All requests and terminal commands are stored in an SQLite database for persistence.
 
@@ -53,7 +54,7 @@ A web-based HTTP client service built with Go and the Beego framework that allow
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Nick1994209/terminalio.git
    ```
 
 2. Navigate to the project directory:
@@ -100,7 +101,7 @@ The application can also be run using Docker. Two build targets are available:
 - `/requests/resend/:id` - Resend a previous request (POST)
 - `/requests/delete/:id` - Delete a request from history (POST)
 - `/terminal` - Terminal interface
-- `/ws/terminal` - WebSocket connection for terminal
+- `/ws/terminal` - WebSocket connection for terminal (automatically uses ws:// or wss:// based on page protocol)
 
 ## License
 

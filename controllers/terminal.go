@@ -1,19 +1,31 @@
 package controllers
 
 import (
-	"bufio"
+	"encoding/base64"
+	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
-	"strings"
+	"sync"
 	"terminalio/models"
 
 	beego "github.com/beego/beego/v2/server/web"
+	"github.com/creack/pty"
 	"github.com/gorilla/websocket"
 )
 
 type TerminalController struct {
 	beego.Controller
+}
+
+// Session represents a terminal session with a persistent shell
+type Session struct {
+	pty     *os.File
+	cmd     *exec.Cmd
+	ws      *websocket.Conn
+	writeMu sync.Mutex // Mutex for WebSocket writes
+	shellMu sync.Mutex // Mutex for shell operations
 }
 
 var upgrader = websocket.Upgrader{
@@ -27,7 +39,7 @@ func (c *TerminalController) Get() {
 	c.Layout = "layout.tpl"
 }
 
-func sendUpdatedHistory(ws *websocket.Conn) {
+func sendUpdatedHistory(session *Session) {
 	// Load command history
 	rows, err := models.DB.Query("SELECT command FROM commands ORDER BY created_at DESC LIMIT 50")
 	if err != nil {
@@ -46,11 +58,102 @@ func sendUpdatedHistory(ws *websocket.Conn) {
 	}
 
 	// Send history to client
-	if err := ws.WriteJSON(map[string]interface{}{
+	session.writeMu.Lock()
+	defer session.writeMu.Unlock()
+	if err := session.ws.WriteJSON(map[string]interface{}{
 		"type": "history",
 		"data": history,
 	}); err != nil {
 		log.Println("Error sending history:", err)
+	}
+}
+
+// startShellSession creates a new shell session with PTY
+func startShellSession() (*Session, error) {
+	// Start a shell process
+	cmd := exec.Command("/bin/bash")
+
+	// Start the command with a pty
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set initial terminal size
+	pty.Setsize(ptmx, &pty.Winsize{
+		Rows: 24,
+		Cols: 80,
+	})
+
+	session := &Session{
+		pty: ptmx,
+		cmd: cmd,
+	}
+
+	return session, nil
+}
+
+// writeToShell writes data to the shell session
+func (s *Session) writeToShell(data string) error {
+	s.shellMu.Lock()
+	defer s.shellMu.Unlock()
+
+	_, err := s.pty.Write([]byte(data + "\n"))
+	return err
+}
+
+// writeRawToShell writes raw data to the shell session without adding a newline
+func (s *Session) writeRawToShell(data []byte) error {
+	s.shellMu.Lock()
+	defer s.shellMu.Unlock()
+
+	_, err := s.pty.Write(data)
+	return err
+}
+
+// resizeTerminal resizes the terminal PTY
+func (s *Session) resizeTerminal(rows, cols uint16) error {
+	s.shellMu.Lock()
+	defer s.shellMu.Unlock()
+
+	return pty.Setsize(s.pty, &pty.Winsize{
+		Rows: rows,
+		Cols: cols,
+	})
+}
+
+// readFromShell reads data from the shell session and sends it to the WebSocket
+func (s *Session) readFromShell() {
+	buf := make([]byte, 1024)
+	for {
+		n, err := s.pty.Read(buf)
+		if err != nil {
+			// Handle EOF or other errors
+			break
+		}
+
+		if n > 0 {
+			// Send raw binary data
+			s.writeMu.Lock()
+			s.ws.WriteJSON(map[string]interface{}{
+				"type": "output",
+				"data": string(buf[:n]),
+			})
+			s.writeMu.Unlock()
+		}
+	}
+}
+
+// close terminates the shell session
+func (s *Session) close() {
+	s.shellMu.Lock()
+	defer s.shellMu.Unlock()
+
+	if s.pty != nil {
+		s.pty.Close()
+	}
+	if s.cmd != nil && s.cmd.Process != nil {
+		s.cmd.Process.Kill()
 	}
 }
 
@@ -88,12 +191,30 @@ func (c *TerminalController) WebSocket() {
 		return
 	}
 
+	// Start a new shell session
+	session, err := startShellSession()
+	if err != nil {
+		log.Println("Error starting shell session:", err)
+		ws.WriteJSON(map[string]interface{}{
+			"type": "output",
+			"data": "Error starting shell session: " + err.Error(),
+		})
+		return
+	}
+
+	// Set the WebSocket in the session
+	session.ws = ws
+
+	// Start reading from the shell in a goroutine
+	go session.readFromShell()
+
 	// Send connection confirmation
 	ws.WriteJSON(map[string]interface{}{
 		"type": "output",
-		"data": "[Connected to terminal]",
+		"data": "[Connected to terminal - Persistent session active]",
 	})
 
+	// Handle incoming messages
 	for {
 		// Read message from client
 		_, message, err := ws.ReadMessage()
@@ -118,72 +239,67 @@ func (c *TerminalController) WebSocket() {
 		stmt.Close()
 
 		// Reload and send updated history
-		go sendUpdatedHistory(ws)
+		go sendUpdatedHistory(session)
 
-		// Execute command
-		parts := strings.Fields(cmdStr)
-		if len(parts) == 0 {
-			continue
+		// Check if this is a raw input message or a command
+		var msgData map[string]interface{}
+		if err := json.Unmarshal([]byte(cmdStr), &msgData); err == nil {
+			if msgType, ok := msgData["type"].(string); ok && msgType == "raw" {
+				// Handle raw input
+				if data, ok := msgData["data"].(string); ok {
+					// Decode base64 encoded raw data
+					decodedData, err := base64.StdEncoding.DecodeString(data)
+					if err != nil {
+						log.Println("Error decoding raw data:", err)
+					} else {
+						if err := session.writeRawToShell(decodedData); err != nil {
+							log.Println("Error writing raw data to shell:", err)
+							session.writeMu.Lock()
+							ws.WriteJSON(map[string]interface{}{
+								"type": "output",
+								"data": "Error writing raw data to shell: " + err.Error(),
+							})
+							session.writeMu.Unlock()
+						}
+					}
+				}
+			} else if msgType, ok := msgData["type"].(string); ok && msgType == "resize" {
+				// Handle terminal resize
+				if rows, ok := msgData["rows"].(float64); ok {
+					if cols, ok := msgData["cols"].(float64); ok {
+						if err := session.resizeTerminal(uint16(rows), uint16(cols)); err != nil {
+							log.Println("Error resizing terminal:", err)
+						}
+					}
+				}
+			} else {
+				// Handle regular command
+				if err := session.writeToShell(cmdStr); err != nil {
+					log.Println("Error writing to shell:", err)
+					session.writeMu.Lock()
+					ws.WriteJSON(map[string]interface{}{
+						"type": "output",
+						"data": "Error writing to shell: " + err.Error(),
+					})
+					session.writeMu.Unlock()
+				}
+			}
+		} else {
+			// Handle regular command (fallback for plain text)
+			if err := session.writeToShell(cmdStr); err != nil {
+				log.Println("Error writing to shell:", err)
+				session.writeMu.Lock()
+				ws.WriteJSON(map[string]interface{}{
+					"type": "output",
+					"data": "Error writing to shell: " + err.Error(),
+				})
+				session.writeMu.Unlock()
+			}
 		}
-
-		name := parts[0]
-		args := parts[1:]
-
-		cmd := exec.Command(name, args...)
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			ws.WriteJSON(map[string]interface{}{
-				"type": "output",
-				"data": "Error creating stdout pipe: " + err.Error(),
-			})
-			continue
-		}
-
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			ws.WriteJSON(map[string]interface{}{
-				"type": "output",
-				"data": "Error creating stderr pipe: " + err.Error(),
-			})
-			continue
-		}
-
-		if err := cmd.Start(); err != nil {
-			ws.WriteJSON(map[string]interface{}{
-				"type": "output",
-				"data": "Error starting command: " + err.Error(),
-			})
-			continue
-		}
-
-		// Send output to client
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			output := scanner.Text()
-			ws.WriteJSON(map[string]interface{}{
-				"type": "output",
-				"data": output,
-			})
-		}
-
-		errScanner := bufio.NewScanner(stderr)
-		for errScanner.Scan() {
-			output := errScanner.Text()
-			ws.WriteJSON(map[string]interface{}{
-				"type": "output",
-				"data": output,
-			})
-		}
-
-		if err := cmd.Wait(); err != nil {
-			ws.WriteJSON(map[string]interface{}{
-				"type": "output",
-				"data": "Command finished with error: " + err.Error(),
-			})
-		}
-		// We don't send a "Command finished successfully" message anymore
-		// The frontend will add a new prompt after receiving any "Command finished" message
 	}
+
+	// Clean up the session when WebSocket closes
+	session.close()
 
 	// Prevent Beego from trying to render a template
 	c.StopRun()
