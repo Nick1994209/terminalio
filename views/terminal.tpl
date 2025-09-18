@@ -11,18 +11,20 @@
         padding: 10px;
         font-family: monospace;
         overflow-y: auto;
-        white-space: pre;
+        white-space: pre-wrap;
         border: 1px solid #ddd;
         outline: none;
         display: flex;
         flex-direction: column;
+        user-select: text;
     }
     .terminal-content {
         flex: 1;
         overflow-y: auto;
         margin-bottom: 10px;
-        white-space: pre;
+        white-space: pre-wrap;
         font-family: monospace;
+        user-select: text;
     }
     .terminal-input-line {
         flex-shrink: 0;
@@ -49,13 +51,16 @@
     .terminal-line {
         display: flex;
     }
-    .terminal-cursor {
+    .terminal-cursor-inline {
         display: inline-block;
         width: 8px;
         height: 16px;
         background-color: #00ff00;
         animation: blink 1s infinite;
-        vertical-align: middle;
+        vertical-align: text-bottom;
+        margin: 0;
+        padding: 0;
+        line-height: 16px;
     }
     .copy-btn {
         background-color: #555;
@@ -98,6 +103,9 @@
     let currentInput = '';
     let prompt = '$ ';
     let history = [];
+    let historyIndex = 0;
+    let cursorPosition = 0;
+    let tempInput = ''; // Temporary storage for when navigating history
     
     function connect() {
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -199,8 +207,9 @@
     
     function appendPrompt() {
         const inputLineContainer = document.getElementById('input-line-container');
-        inputLineContainer.innerHTML = '<div class="terminal-line"><span class="terminal-prompt">' + prompt + '</span><span id="input-text"></span><span class="terminal-cursor"></span></div>';
+        inputLineContainer.innerHTML = '<div class="terminal-line"><span class="terminal-prompt">' + prompt + '</span><span id="input-text"></span></div>';
         currentInput = '';
+        cursorPosition = 0;
         updateInputText();
         scrollToBottom();
     }
@@ -208,7 +217,16 @@
     function updateInputText() {
         const inputText = document.getElementById('input-text');
         if (inputText) {
-            inputText.textContent = currentInput;
+            // Display text with cursor position
+            if (cursorPosition === currentInput.length) {
+                // Cursor at the end
+                inputText.innerHTML = currentInput + '<span class="terminal-cursor-inline"></span>';
+            } else {
+                // Cursor in the middle
+                const beforeCursor = currentInput.substring(0, cursorPosition);
+                const afterCursor = currentInput.substring(cursorPosition);
+                inputText.innerHTML = beforeCursor + '<span class="terminal-cursor-inline"></span>' + afterCursor;
+            }
         }
     }
     
@@ -227,14 +245,23 @@
         const historyDiv = document.getElementById('history');
         historyDiv.innerHTML = '';
         
-        history.forEach(cmd => {
+        // Display history in chronological order (oldest first)
+        for (let i = 0; i < history.length; i++) {
+            const cmd = history[i];
+            // Skip empty commands or button presses
+            if (!cmd || cmd.trim() === '') continue;
+            
             const btn = document.createElement('button');
             btn.className = 'copy-btn';
             btn.textContent = cmd;
             btn.onclick = function() {
                 // Copy command to current input
                 currentInput = cmd;
+                cursorPosition = currentInput.length;
                 updateInputText();
+                // Reset history navigation
+                historyIndex = 0;
+                tempInput = '';
                 // Focus the terminal and scroll to bottom
                 const output = document.getElementById('output');
                 output.focus();
@@ -242,7 +269,7 @@
             };
             historyDiv.appendChild(btn);
             historyDiv.appendChild(document.createElement('br'));
-        });
+        }
     }
     
     function requestHistoryUpdate() {
@@ -366,6 +393,14 @@
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (currentInput.trim() !== '') {
+                    // Add command to history
+                    if (!history || history.length === 0 || history[history.length - 1] !== currentInput) {
+                        if (!history) {
+                            history = [];
+                        }
+                        history.push(currentInput);
+                    }
+                    
                     // Echo the command in the terminal
                     appendCommandEcho(currentInput);
                     
@@ -374,6 +409,9 @@
                         ws.send(currentInput);
                     }
                     currentInput = '';
+                    cursorPosition = 0;
+                    historyIndex = 0;
+                    tempInput = '';
                 } else {
                     appendOutput(prompt);
                 }
@@ -386,33 +424,162 @@
                 setTimeout(scrollToBottom, 10);
             } else if (e.key === 'Backspace') {
                 e.preventDefault();
-                if (currentInput.length > 0) {
-                    currentInput = currentInput.slice(0, -1);
+                if (cursorPosition > 0) {
+                    // Remove character before cursor
+                    currentInput = currentInput.substring(0, cursorPosition - 1) + currentInput.substring(cursorPosition);
+                    cursorPosition--;
                     updateInputText();
                     scrollToBottom();
                 } else {
                     // Send backspace to terminal when input is empty
                     sendRawKey(e);
                 }
+            } else if (e.key === 'Delete') {
+                e.preventDefault();
+                if (cursorPosition < currentInput.length) {
+                    // Remove character at cursor
+                    currentInput = currentInput.substring(0, cursorPosition) + currentInput.substring(cursorPosition + 1);
+                    updateInputText();
+                    scrollToBottom();
+                } else {
+                    // Send delete to terminal when at end of input
+                    sendRawKey(e);
+                }
             } else if (e.key === 'Tab') {
                 e.preventDefault();
                 // Send tab to terminal
                 sendRawKey(e);
-            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                // Send arrow keys to terminal
-                sendRawKey(e);
+                if (history && history.length > 0) {
+                    if (historyIndex === 0) {
+                        // Save current input before navigating history
+                        tempInput = currentInput;
+                    }
+                    if (historyIndex < history.length) {
+                        historyIndex++;
+                        currentInput = history[historyIndex - 1];
+                        cursorPosition = currentInput ? currentInput.length : 0;
+                        updateInputText();
+                        scrollToBottom();
+                    }
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    if (historyIndex === 0) {
+                        // Restore saved input
+                        currentInput = tempInput;
+                    } else if (history && history.length > 0) {
+                        currentInput = history[historyIndex - 1];
+                    }
+                    cursorPosition = currentInput ? currentInput.length : 0;
+                    updateInputText();
+                    scrollToBottom();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (cursorPosition > 0) {
+                    cursorPosition--;
+                    updateInputText();
+                    scrollToBottom();
+                }
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (cursorPosition < currentInput.length) {
+                    cursorPosition++;
+                    updateInputText();
+                    scrollToBottom();
+                }
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                cursorPosition = 0;
+                updateInputText();
+                scrollToBottom();
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                cursorPosition = currentInput.length;
+                updateInputText();
+                scrollToBottom();
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 // Send escape to terminal
                 sendRawKey(e);
             } else if (e.ctrlKey) {
                 e.preventDefault();
-                // Send Ctrl+key combinations to terminal
-                sendRawKey(e);
+                // Handle Ctrl+key combinations for vim-like behavior
+                if (e.key === 'a' || e.key === 'A') {
+                    cursorPosition = 0;
+                    updateInputText();
+                    scrollToBottom();
+                } else if (e.key === 'e' || e.key === 'E') {
+                    cursorPosition = currentInput.length;
+                    updateInputText();
+                    scrollToBottom();
+                } else if (e.key === 'k' || e.key === 'K') {
+                    // Ctrl+K: delete from cursor to end of line
+                    currentInput = currentInput.substring(0, cursorPosition);
+                    updateInputText();
+                    scrollToBottom();
+                } else if (e.key === 'u' || e.key === 'U') {
+                    // Ctrl+U: delete from beginning of line to cursor
+                    currentInput = currentInput.substring(cursorPosition);
+                    cursorPosition = 0;
+                    updateInputText();
+                    scrollToBottom();
+                } else if (e.key === 'w' || e.key === 'W') {
+                    // Ctrl+W: delete word before cursor
+                    const beforeCursor = currentInput.substring(0, cursorPosition);
+                    const lastSpace = beforeCursor.lastIndexOf(' ');
+                    if (lastSpace !== -1) {
+                        currentInput = beforeCursor.substring(0, lastSpace) + currentInput.substring(cursorPosition);
+                        cursorPosition = lastSpace;
+                    } else {
+                        currentInput = currentInput.substring(cursorPosition);
+                        cursorPosition = 0;
+                    }
+                    updateInputText();
+                    scrollToBottom();
+                } else if (e.key === 'ArrowLeft') {
+                    // Ctrl+ArrowLeft: move cursor to previous word
+                    const beforeCursor = currentInput.substring(0, cursorPosition);
+                    const lastSpace = beforeCursor.lastIndexOf(' ');
+                    if (lastSpace !== -1) {
+                        cursorPosition = lastSpace;
+                        // Skip consecutive spaces
+                        while (cursorPosition > 0 && currentInput.charAt(cursorPosition - 1) === ' ') {
+                            cursorPosition--;
+                        }
+                    } else {
+                        cursorPosition = 0;
+                    }
+                    updateInputText();
+                    scrollToBottom();
+                } else if (e.key === 'ArrowRight') {
+                    // Ctrl+ArrowRight: move cursor to next word
+                    const afterCursor = currentInput.substring(cursorPosition);
+                    const nextSpace = afterCursor.indexOf(' ');
+                    if (nextSpace !== -1) {
+                        cursorPosition += nextSpace + 1;
+                        // Skip consecutive spaces
+                        while (cursorPosition < currentInput.length && currentInput.charAt(cursorPosition) === ' ') {
+                            cursorPosition++;
+                        }
+                    } else {
+                        cursorPosition = currentInput.length;
+                    }
+                    updateInputText();
+                    scrollToBottom();
+                } else {
+                    // Handle other Ctrl+key combinations locally or ignore
+                    // Don't send to terminal
+                }
             } else if (e.key.length === 1) {
                 e.preventDefault();
-                currentInput += e.key;
+                // Insert character at cursor position
+                currentInput = currentInput.substring(0, cursorPosition) + e.key + currentInput.substring(cursorPosition);
+                cursorPosition++;
                 updateInputText();
                 scrollToBottom();
             }

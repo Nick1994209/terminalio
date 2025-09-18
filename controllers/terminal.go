@@ -225,11 +225,50 @@ func (c *TerminalController) WebSocket() {
 
 		cmdStr := string(message)
 
-		// Save command to database
+		// Check if this is a raw input message or a command before saving to history
+		var msgData map[string]interface{}
+		if json.Unmarshal([]byte(cmdStr), &msgData) == nil {
+			// This is a JSON message, check if it's a raw key event or resize
+			if msgType, ok := msgData["type"].(string); ok && (msgType == "raw" || msgType == "resize") {
+				// Skip saving raw key events and resize commands to history
+				// But still process them
+				if msgType, ok := msgData["type"].(string); ok && msgType == "raw" {
+					// Handle raw input
+					if data, ok := msgData["data"].(string); ok {
+						// Decode base64 encoded raw data
+						decodedData, err := base64.StdEncoding.DecodeString(data)
+						if err != nil {
+							log.Println("Error decoding raw data:", err)
+						} else {
+							if err := session.writeRawToShell(decodedData); err != nil {
+								log.Println("Error writing raw data to shell:", err)
+								session.writeMu.Lock()
+								ws.WriteJSON(map[string]interface{}{
+									"type": "output",
+									"data": "Error writing raw data to shell: " + err.Error(),
+								})
+								session.writeMu.Unlock()
+							}
+						}
+					}
+				} else if msgType, ok := msgData["type"].(string); ok && msgType == "resize" {
+					// Handle terminal resize
+					if rows, ok := msgData["rows"].(float64); ok {
+						if cols, ok := msgData["cols"].(float64); ok {
+							if err := session.resizeTerminal(uint16(rows), uint16(cols)); err != nil {
+								log.Println("Error resizing terminal:", err)
+							}
+						}
+					}
+				}
+				continue
+			}
+		}
+
+		// Save command to database (only for non-raw, non-resize commands)
 		stmt, err := models.DB.Prepare("INSERT INTO commands(command, created_at) VALUES(?, datetime('now'))")
 		if err != nil {
 			log.Println("Error preparing statement:", err)
-			continue
 		}
 
 		_, err = stmt.Exec(cmdStr)
@@ -241,51 +280,9 @@ func (c *TerminalController) WebSocket() {
 		// Reload and send updated history
 		go sendUpdatedHistory(session)
 
-		// Check if this is a raw input message or a command
-		var msgData map[string]interface{}
-		if err := json.Unmarshal([]byte(cmdStr), &msgData); err == nil {
-			if msgType, ok := msgData["type"].(string); ok && msgType == "raw" {
-				// Handle raw input
-				if data, ok := msgData["data"].(string); ok {
-					// Decode base64 encoded raw data
-					decodedData, err := base64.StdEncoding.DecodeString(data)
-					if err != nil {
-						log.Println("Error decoding raw data:", err)
-					} else {
-						if err := session.writeRawToShell(decodedData); err != nil {
-							log.Println("Error writing raw data to shell:", err)
-							session.writeMu.Lock()
-							ws.WriteJSON(map[string]interface{}{
-								"type": "output",
-								"data": "Error writing raw data to shell: " + err.Error(),
-							})
-							session.writeMu.Unlock()
-						}
-					}
-				}
-			} else if msgType, ok := msgData["type"].(string); ok && msgType == "resize" {
-				// Handle terminal resize
-				if rows, ok := msgData["rows"].(float64); ok {
-					if cols, ok := msgData["cols"].(float64); ok {
-						if err := session.resizeTerminal(uint16(rows), uint16(cols)); err != nil {
-							log.Println("Error resizing terminal:", err)
-						}
-					}
-				}
-			} else {
-				// Handle regular command
-				if err := session.writeToShell(cmdStr); err != nil {
-					log.Println("Error writing to shell:", err)
-					session.writeMu.Lock()
-					ws.WriteJSON(map[string]interface{}{
-						"type": "output",
-						"data": "Error writing to shell: " + err.Error(),
-					})
-					session.writeMu.Unlock()
-				}
-			}
-		} else {
-			// Handle regular command (fallback for plain text)
+		// Now process the command (if it's not a raw message or resize)
+		if json.Unmarshal([]byte(cmdStr), &msgData) != nil {
+			// This is not a JSON message, treat it as a regular command
 			if err := session.writeToShell(cmdStr); err != nil {
 				log.Println("Error writing to shell:", err)
 				session.writeMu.Lock()
