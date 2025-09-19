@@ -58,6 +58,11 @@ func sendUpdatedHistory(session *Session) {
 	}
 
 	// Send history to client
+	// Ensure we never send null data
+	if history == nil {
+		history = []string{}
+	}
+
 	session.writeMu.Lock()
 	defer session.writeMu.Unlock()
 	if err := session.ws.WriteJSON(map[string]interface{}{
@@ -183,6 +188,11 @@ func (c *TerminalController) WebSocket() {
 	}
 
 	// Send history to client
+	// Ensure we never send null data
+	if history == nil {
+		history = []string{}
+	}
+
 	if err := ws.WriteJSON(map[string]interface{}{
 		"type": "history",
 		"data": history,
@@ -228,9 +238,9 @@ func (c *TerminalController) WebSocket() {
 		// Check if this is a raw input message or a command before saving to history
 		var msgData map[string]interface{}
 		if json.Unmarshal([]byte(cmdStr), &msgData) == nil {
-			// This is a JSON message, check if it's a raw key event or resize
-			if msgType, ok := msgData["type"].(string); ok && (msgType == "raw" || msgType == "resize") {
-				// Skip saving raw key events and resize commands to history
+			// This is a JSON message, check if it's a raw key event, resize, or clear_history
+			if msgType, ok := msgData["type"].(string); ok && (msgType == "raw" || msgType == "resize" || msgType == "clear_history") {
+				// Skip saving raw key events, resize commands, and clear_history to history
 				// But still process them
 				if msgType, ok := msgData["type"].(string); ok && msgType == "raw" {
 					// Handle raw input
@@ -260,12 +270,30 @@ func (c *TerminalController) WebSocket() {
 							}
 						}
 					}
+				} else if msgType, ok := msgData["type"].(string); ok && msgType == "clear_history" {
+					// Handle clear history request - clear database and send confirmation back to client
+					_, err := models.DB.Exec("DELETE FROM commands")
+					if err != nil {
+						log.Println("Error clearing terminal history:", err)
+						session.writeMu.Lock()
+						ws.WriteJSON(map[string]interface{}{
+							"type": "output",
+							"data": "Error clearing terminal history: " + err.Error(),
+						})
+						session.writeMu.Unlock()
+					} else {
+						session.writeMu.Lock()
+						ws.WriteJSON(map[string]interface{}{
+							"type": "clear_history",
+						})
+						session.writeMu.Unlock()
+					}
 				}
 				continue
 			}
 		}
 
-		// Save command to database (only for non-raw, non-resize commands)
+		// Save command to database (only for non-raw, non-resize, non-clear_history commands)
 		stmt, err := models.DB.Prepare("INSERT INTO commands(command, created_at) VALUES(?, datetime('now'))")
 		if err != nil {
 			log.Println("Error preparing statement:", err)

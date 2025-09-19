@@ -156,7 +156,20 @@
                 }
             } catch (e) {
                 // If not JSON, treat as plain text (backward compatibility)
-                appendOutput(event.data);
+                // But don't display JSON-looking strings as output
+                if (typeof event.data === 'string' && event.data.startsWith('{') && event.data.endsWith('}')) {
+                    try {
+                        // Try to parse as JSON one more time for debugging
+                        const jsonData = JSON.parse(event.data);
+                        console.warn('Failed to parse JSON message in main try block but succeeded in catch block:', jsonData);
+                        // Still don't display JSON as output
+                    } catch (innerE) {
+                        // Really not JSON, display as output
+                        appendOutput(event.data);
+                    }
+                } else {
+                    appendOutput(event.data);
+                }
                 
                 // If this is the "Command finished" message, add a new prompt
                 if (event.data.includes('Command finished')) {
@@ -310,7 +323,14 @@
             return;
         }
         
-        // Clear the history array
+        // Send clear history message through WebSocket
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'clear_history'
+            }));
+        }
+        
+        // Clear the history array immediately
         history = [];
         
         // Clear the history display
