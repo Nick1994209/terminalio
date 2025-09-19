@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TerminalIO</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -43,14 +44,37 @@
 </head>
 <body>
     <div class="container">
-        <h1>TerminalIO</h1>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+            <img src="/static/favicon.svg" alt="TerminalIO Icon" style="width: 40px; height: 40px;">
+            <h1>TerminalIO</h1>
+        </div>
         <nav>
             <a href="/requests">Requests</a>
             <a href="/terminal">Terminal</a>
         </nav>
-        <div style="text-align: center; padding: 50px;">
+        <div style="text-align: center; padding: 30px;">
             <h2>Welcome to TerminalIO</h2>
-            <p>This application allows you to send HTTP requests and execute terminal commands.</p>
+            
+            <!-- Two-column layout for comics -->
+            <div style="display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; margin: 30px 0;">
+                <!-- Requests page comic -->
+                <div style="flex: 1; min-width: 300px; max-width: 500px; text-align: center;">
+                    <h3>How to Use the Requests Page</h3>
+                    <p>Send HTTP requests like a pro!</p>
+                    <a href="/requests" style="display: block;">
+                        <img src="/static/requests_comic.svg" alt="How to use Requests Page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                    </a>
+                </div>
+                
+                <!-- Terminal page comic -->
+                <div style="flex: 1; min-width: 300px; max-width: 500px; text-align: center;">
+                    <h3>How to Use the Terminal Page</h3>
+                    <p>Execute commands in a Linux-style terminal emulator!</p>
+                    <a href="/terminal" style="display: block;">
+                        <img src="/static/terminal_comic.svg" alt="How to use Terminal Page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                    </a>
+                </div>
+            </div>
             
             <div style="margin-top: 30px;">
                 <a href="/requests" style="display: inline-block; padding: 15px 30px; background-color: #007cba; color: white; text-decoration: none; border-radius: 5px; margin: 10px;">Go to Requests Page</a>

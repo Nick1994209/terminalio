@@ -1,6 +1,14 @@
 # TerminalIO
 
+![favicon](static/favicon.svg)
+
 A web-based HTTP client service built with Go and the Beego framework that allows users to send HTTP requests with customizable parameters, view responses, and maintain a history of requests.
+
+## 🖼️ Interface Overview
+
+| Requests Page | Terminal Page |
+|--------------|---------------|
+| ![Requests Page](static/requests_comic.svg) | ![Terminal Page](static/terminal_comic.svg) |
 
 ## 🏗️ Architecture
 
@@ -30,10 +38,11 @@ The project has been refactored in accordance with the principles of clean archi
   - Interactive command execution
   - Support for shell builtins (cd, export, etc.)
 
+
 - **Database Storage**: All requests and terminal commands are stored in an SQLite database for persistence.
 
-## 🧰 Terminal Essential Linux Tools Overview
 
+## 🧰 Terminal Essential Linux Tools Overview
 | Tool            | Description                                      | Common Commands                                  |
 |-----------------|--------------------------------------------------|--------------------------------------------------|
 | `iputils-ping`  | Sends ICMP echo requests to test host reachability. | `ping google.com`<br>`ping -c 4 8.8.8.8`         |

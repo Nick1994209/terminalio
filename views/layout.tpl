@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TerminalIO</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -134,7 +135,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>TerminalIO</h1>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+            <img src="/static/favicon.svg" alt="TerminalIO Icon" style="width: 40px; height: 40px;">
+            <h1>TerminalIO</h1>
+        </div>
         <nav>
             <a href="/">Home</a>
             <a href="/requests">Requests</a>
