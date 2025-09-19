@@ -226,23 +226,22 @@
     }
     
     function processBuffer(content) {
-        // Process complete lines
-        let lines = outputBuffer.split('\n');
+        // Process the buffer as a whole to preserve original formatting
+        const htmlText = convertAnsiToHtml(outputBuffer);
         
-        // If the buffer doesn't end with \n, the last line is incomplete
-        // We should process all lines except the last incomplete one
-        if (!outputBuffer.endsWith('\n') && lines.length > 0) {
-            // Remove the last incomplete line from processing, but keep it in the buffer
-            outputBuffer = lines.pop() || '';
-        } else {
-            // All lines are complete, clear buffer
-            outputBuffer = '';
+        // Add the converted text
+        // But be careful about adding extra newlines
+        if (htmlText.length > 0) {
+            content.innerHTML += htmlText;
         }
         
-        // Process complete lines
-        for (let i = 0; i < lines.length; i++) {
-            const htmlText = convertAnsiToHtml(lines[i]);
-            content.innerHTML += htmlText + '\n';
+        // Clear buffer since we processed everything
+        outputBuffer = '';
+        
+        // Clean up excessive newlines at the end
+        // Remove trailing newlines that cause extra blank lines
+        while (content.innerHTML.length > 1 && content.innerHTML.endsWith('\n\n')) {
+            content.innerHTML = content.innerHTML.slice(0, -1);
         }
     }
     
@@ -251,7 +250,7 @@
         // Replace common ANSI escape sequences with HTML
         // This is a simplified version - a full implementation would be more complex
         
-        // Handle carriage return + line feed
+        // Handle carriage return + line feed - but preserve one \n
         text = text.replace(/\r\n/g, '\n');
         
         // Handle carriage return (move cursor to beginning of line)
@@ -271,9 +270,9 @@
         text = text.replace(/\x1b\[([0-9;]*)[ABCDEFG]/g, ''); // Cursor movement
         
         // Escape HTML characters
-        text = text.replace(/&/g, '&')
-                     .replace(/</g, '<')
-                     .replace(/>/g, '>');
+        text = text.replace(/&/g, '&amp;')
+                     .replace(/</g, '&lt;')
+                     .replace(/>/g, '&gt;');
         
         return text;
     }
