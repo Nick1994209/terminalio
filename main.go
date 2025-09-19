@@ -1,3 +1,7 @@
+// DEPRECATED: This file is no longer used. The application entry point is now in cmd/main.go
+// This file is kept for reference only.
+
+/*
 package main
 
 import (
@@ -23,3 +27,4 @@ func main() {
 	// Run the application
 	web.Run()
 }
+*/

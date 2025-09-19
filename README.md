@@ -2,6 +2,10 @@
 
 A web-based HTTP client service built with Go and the Beego framework that allows users to send HTTP requests with customizable parameters, view responses, and maintain a history of requests.
 
+## 🏗️ Architecture
+
+The project has been refactored in accordance with the principles of clean architecture. A detailed description of the architecture can be found in the file [README_ARCHITECTURE.md](README_ARCHITECTURE.md).
+
 ## Features
 
 - **HTTP Request Form**: Send requests with full parameter control:
@@ -64,7 +68,7 @@ A web-based HTTP client service built with Go and the Beego framework that allow
 
 3. Run the application:
    ```bash
-   go run main.go
+   go run cmd/main.go
    ```
 
 4. Access the application in your browser at `http://localhost:8080`
