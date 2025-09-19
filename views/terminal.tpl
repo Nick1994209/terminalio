@@ -147,11 +147,14 @@
                     // Display command output
                     appendOutput(data.data);
                     
-                    // If this is the "Command finished" message, add a new prompt
-                    if (data.data.includes('Command finished')) {
+                    // Check if this output contains a prompt, indicating command is finished
+                    if (data.data.includes('$ ') || data.data.includes('# ')) {
                         finishCommand();
                         // Update history after command execution
-                        requestHistoryUpdate();
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            // Send a special command to request history update
+                            // This is a simplified approach - in a real app, you might have a separate endpoint
+                        }
                     }
                 }
             } catch (e) {
@@ -166,16 +169,19 @@
                     } catch (innerE) {
                         // Really not JSON, display as output
                         appendOutput(event.data);
+                        
+                        // Check if this output contains a prompt, indicating command is finished
+                        if (event.data.includes('$ ') || event.data.includes('# ')) {
+                            finishCommand();
+                        }
+                        
+                        // Check if this output contains a prompt, indicating command is finished
+                        if (event.data.includes('$ ') || event.data.includes('# ')) {
+                            finishCommand();
+                        }
                     }
                 } else {
                     appendOutput(event.data);
-                }
-                
-                // If this is the "Command finished" message, add a new prompt
-                if (event.data.includes('Command finished')) {
-                    finishCommand();
-                    // Update history after command execution
-                    requestHistoryUpdate();
                 }
             }
         };
@@ -190,11 +196,54 @@
         };
     }
     
+    // Buffer for handling chunked output
+    let outputBuffer = '';
+    let bufferTimeout = null;
+    
     function appendOutput(text) {
         const content = document.getElementById('terminal-content');
-        const htmlText = convertAnsiToHtml(text);
-        content.innerHTML += htmlText + '\n';
+        
+        // Add to buffer
+        outputBuffer += text;
+        
+        // Clear any existing timeout
+        if (bufferTimeout) {
+            clearTimeout(bufferTimeout);
+        }
+        
+        // If we have a complete line (ends with \n), process immediately
+        if (outputBuffer.endsWith('\n')) {
+            processBuffer(content);
+        } else {
+            // Otherwise, wait a bit to see if more data arrives
+            // This helps with cases where output is split across multiple messages
+            bufferTimeout = setTimeout(() => {
+                processBuffer(content);
+            }, 10); // Small delay to allow chunks to accumulate
+        }
+        
         scrollToBottom();
+    }
+    
+    function processBuffer(content) {
+        // Process complete lines
+        let lines = outputBuffer.split('\n');
+        
+        // If the buffer doesn't end with \n, the last line is incomplete
+        // We should process all lines except the last incomplete one
+        if (!outputBuffer.endsWith('\n') && lines.length > 0) {
+            // Remove the last incomplete line from processing, but keep it in the buffer
+            outputBuffer = lines.pop() || '';
+        } else {
+            // All lines are complete, clear buffer
+            outputBuffer = '';
+        }
+        
+        // Process complete lines
+        for (let i = 0; i < lines.length; i++) {
+            const htmlText = convertAnsiToHtml(lines[i]);
+            content.innerHTML += htmlText + '\n';
+        }
     }
     
     // Simple ANSI to HTML converter
@@ -227,13 +276,6 @@
                      .replace(/>/g, '>');
         
         return text;
-    }
-    
-    function appendCommandEcho(command) {
-        const content = document.getElementById('terminal-content');
-        const htmlText = convertAnsiToHtml(prompt + command);
-        content.innerHTML += htmlText + '\n';
-        scrollToBottom();
     }
     
     function appendPrompt() {
@@ -300,15 +342,6 @@
             };
             historyDiv.appendChild(btn);
             historyDiv.appendChild(document.createElement('br'));
-        }
-    }
-    
-    function requestHistoryUpdate() {
-        // In a real implementation, we would request updated history from the server
-        // For now, we'll simulate by requesting a history refresh
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            // Send a special command to request history update
-            // This is a simplified approach - in a real app, you might have a separate endpoint
         }
     }
     
@@ -457,10 +490,7 @@
                         history.push(currentInput);
                     }
                     
-                    // Echo the command in the terminal
-                    appendCommandEcho(currentInput);
-                    
-                    // Send command to server
+                    // Send command to server (don't echo it - the shell will do that)
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(currentInput);
                     }
@@ -469,7 +499,10 @@
                     historyIndex = 0;
                     tempInput = '';
                 } else {
-                    appendOutput(prompt);
+                    // Send empty command to get a new prompt
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send('');
+                    }
                 }
                 // Clear the input text content but keep the container
                 const inputText = document.getElementById('input-text');
