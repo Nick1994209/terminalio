@@ -119,3 +119,23 @@ The application can also be run using Docker. Two build targets are available:
 ## License
 
 This project is licensed under the MIT License.
+
+---
+
+## AI-Generated Content Notice
+
+This project incorporates content generated with the assistance of artificial intelligence tools.
+Specifically, the humorous comic dialogues in the user interface were crafted with AI assistance
+to enhance user engagement and provide an entertaining experience while using TerminalIO.
+
+The AI-generated content aims to:
+- Provide helpful examples of interactions with the TerminalIO service
+- Illustrate common scenarios users might encounter
+- Add personality and humor to the application
+
+While AI assistance was used in creating certain elements of this project, all code and
+technical implementations were developed by human developers following best practices
+in software engineering and clean architecture principles.
+
+For more information about the architecture and design decisions, please refer to
+[README_ARCHITECTURE.md](README_ARCHITECTURE.md).
