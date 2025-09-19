@@ -89,13 +89,13 @@ The application can also be run using Docker. Two build targets are available:
 1. **Root user** (default):
    ```bash
    docker build --target root-user -t terminalio .
-   docker run -p 8080:8080 terminalio
+   docker run -p 8080:8080 --name terminalio terminalio
    ```
 
 2. **Non-root user** (enhanced security):
    ```bash
    docker build --target non-root-user -t terminalio:nonroot .
-   docker run -p 8080:8080 terminalio:nonroot
+   docker run -p 8080:8080 --name terminalio terminalio:nonroot
    ```
 
 ## Usage

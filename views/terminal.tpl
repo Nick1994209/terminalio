@@ -1,103 +1,3 @@
-<style>
-    .terminal-container {
-        display: flex;
-        height: 600px;
-        margin-top: 20px;
-    }
-    .terminal-output {
-        flex: 3;
-        background-color: #000;
-        color: #00ff00;
-        padding: 10px;
-        font-family: monospace;
-        overflow-y: auto;
-        white-space: pre-wrap;
-        border: 1px solid #ddd;
-        outline: none;
-        display: flex;
-        flex-direction: column;
-        user-select: text;
-    }
-    .terminal-content {
-        flex: 1;
-        overflow-y: auto;
-        margin-bottom: 10px;
-        white-space: pre-wrap;
-        font-family: monospace;
-        user-select: text;
-    }
-    .terminal-input-line {
-        flex-shrink: 0;
-    }
-    .terminal-history {
-        flex: 1;
-        background-color: #f5f5f5;
-        padding: 10px;
-        overflow-y: auto;
-        border: 1px solid #ddd;
-        margin-left: 10px;
-    }
-    .terminal-prompt {
-        color: #00ff00;
-    }
-    .terminal-input {
-        background-color: transparent;
-        color: #00ff00;
-        border: none;
-        outline: none;
-        font-family: monospace;
-        width: calc(100% - 20px);
-    }
-    .terminal-line {
-        display: flex;
-    }
-    .terminal-cursor-inline {
-        display: inline-block;
-        width: 8px;
-        height: 16px;
-        background-color: #00ff00;
-        animation: blink 1s infinite;
-        vertical-align: text-bottom;
-        margin: 0;
-        padding: 0;
-        line-height: 16px;
-    }
-    .copy-btn {
-        background-color: #555;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        font-size: 12px;
-        cursor: pointer;
-        margin: 2px;
-        border-radius: 3px;
-        width: 100%;
-        text-align: left;
-        font-family: monospace;
-    }
-    .copy-btn:hover {
-        background-color: #333;
-    }
-    @keyframes blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0; }
-    }
-    .clear-history-btn {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        padding: 2px 6px;
-        font-size: 10px;
-        cursor: pointer;
-        border-radius: 3px;
-        float: right;
-        margin-top: 5px;
-    }
-    .clear-history-btn:hover {
-        background-color: #c82333;
-    }
-</style>
-
 <h2>Terminal</h2>
 <p>Linux-style terminal emulator.</p>
 
@@ -107,7 +7,7 @@
         <div class="terminal-input-line" id="input-line-container"></div>
     </div>
     <div class="terminal-history">
-        <h3>Command History<button class="clear-history-btn" onclick="clearHistory()">Clear</button></h3>
+        <h3>Command History<button class="terminal-clear-history-btn" onclick="clearHistory()">Clear</button></h3>
         <div id="history"></div>
     </div>
 </div>
@@ -324,7 +224,7 @@
             if (!cmd || cmd.trim() === '') continue;
             
             const btn = document.createElement('button');
-            btn.className = 'copy-btn';
+            btn.className = 'terminal-copy-btn';
             btn.textContent = cmd;
             btn.onclick = function() {
                 // Copy command to current input

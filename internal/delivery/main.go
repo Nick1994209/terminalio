@@ -9,5 +9,6 @@ type MainController struct {
 }
 
 func (c *MainController) Get() {
+	c.Layout = "layout.tpl"
 	c.TplName = "index.tpl"
 }
