@@ -15,17 +15,33 @@
     .back-to-requests-btn {
         background-color: #007cba;
         color: white;
-        padding: 8px 15px;
+        padding: 12px 24px;
         text-decoration: none;
-        border-radius: 3px;
-        font-size: 0.9rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        justify-content: center;
     }
     
     .back-to-requests-btn:hover {
         background-color: #005a87;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .back-to-requests-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .back-to-requests-btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(0, 124, 186, 0.4);
     }
     
     .filter-form {
@@ -60,18 +76,34 @@
     }
     
     .clear-filters-btn {
-        padding: 8px 15px;
+        padding: 12px 24px;
         background-color: #6c757d;
         color: white;
         text-decoration: none;
-        border-radius: 3px;
-        font-size: 0.9rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
         display: inline-flex;
         align-items: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        justify-content: center;
     }
     
     .clear-filters-btn:hover {
         background-color: #5a6268;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .clear-filters-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .clear-filters-btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(108, 117, 125, 0.4);
     }
     
     .history-table-container {
@@ -186,14 +218,33 @@
     }
     
     .action-btn {
-        padding: 6px 12px;
+        padding: 8px 16px;
         border: none;
-        border-radius: 3px;
+        border-radius: 8px;
         cursor: pointer;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
+        font-weight: 600;
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        justify-content: center;
+    }
+    
+    .action-btn:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .action-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .action-btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(0, 124, 186, 0.4);
     }
     
     .resend-btn {
@@ -212,6 +263,11 @@
     
     .delete-btn:hover {
         background-color: #c82333;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+    }
+    
+    .delete-btn:focus {
+        box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.4);
     }
     
     .no-requests-message {
