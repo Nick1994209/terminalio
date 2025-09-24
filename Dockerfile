@@ -26,14 +26,14 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main cmd/main.go
 # Base stage with common setup
 FROM debian:stable-slim AS base
 
-# # Install additional tools
-# RUN apt-get update && \
-#     apt-get install -y \
-#     iputils-ping \
-#     curl \
-#     ca-certificates \
-#     wget \
-#     && rm -rf /var/lib/apt/lists/*
+# Install additional tools
+RUN apt-get update && \
+    apt-get install -y \
+    iputils-ping \
+    curl \
+    ca-certificates \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create directory for the application
 WORKDIR /app
