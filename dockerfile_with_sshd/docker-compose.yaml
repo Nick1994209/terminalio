@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  terminalio-ssh:
+    build:
+      context: ..
+      dockerfile: dockerfile_with_sshd/Dockerfile
+    ports:
+      - "8080:8080"   # Terminalio web interface
+      - "2222:2222"   # SSH access
+    volumes:
+      - ./data:/app/data                  # Persistent data storage
+      - ./keys:/etc/ssh/.ssh_aicloud      # SSH authorized keys
+    environment:
+      - DB_PATH=/app/data/requests.db

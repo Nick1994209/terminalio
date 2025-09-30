@@ -1,0 +1,37 @@
+# This is the sshd server system-wide configuration file.  See
+# sshd_config(5) for more information.
+
+# This sshd was compiled with PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games
+
+# The strategy used for options in the default sshd_config shipped with
+# OpenSSH is to specify options with their default value where
+# possible, but leave them commented.  Uncommented options override the
+# default value.
+
+Include /etc/ssh/sshd_config.d/*.conf
+
+
+ListenAddress 0.0.0.0
+AddressFamily inet
+Port 2222
+
+
+PubkeyAcceptedAlgorithms +ssh-rsa
+UsePAM no
+
+AuthorizedKeysFile /home/jovyan/.ssh/authorized_keys
+
+KbdInteractiveAuthentication no
+X11Forwarding no
+PrintMotd no
+AcceptEnv *
+Subsystem       sftp    /usr/lib/openssh/sftp-server
+
+# Enable debug logging
+LogLevel DEBUG3
+SyslogFacility AUTHPRIV
+
+#MaxSessions	Максимальное количество сессий (каналов) в одном SSH-подключении. (Применяется, когда клиент уже аутентифицирован)
+#MaxStartups	Максимальное количество незавершённых подключений (Применяется до аутентификации)
+MaxSessions 100
+MaxStartups 50
